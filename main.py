@@ -1,78 +1,68 @@
-import pandas as pd
 import os
+import pandas as pd
 
-from reportlab.lib.pagesizes import landscape, A4
-from reportlab.pdfgen import canvas
+from PIL import Image, ImageDraw, ImageFont
 
-DATA_FILE = "data/participants.csv"
-OUTPUT_DIR = "output"
+# Paths
+TEMPLATE = "templates/certificate.png"
+DATA = "data/participants.csv"
+OUTPUT = "output"
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(OUTPUT, exist_ok=True)
 
 
 def generate_certificate(name, certificate_id):
 
-    filename = f"{OUTPUT_DIR}/{certificate_id}.pdf"
+    # Open certificate template
+    img = Image.open(TEMPLATE).convert("RGB")
 
-    c = canvas.Canvas(
-        filename,
-        pagesize=landscape(A4)
+    draw = ImageDraw.Draw(img)
+
+    width, height = img.size
+
+    # Load font
+    try:
+        font = ImageFont.truetype(
+            "C:/Windows/Fonts/georgiab.ttf", 65
+        )
+    except OSError:
+        font = ImageFont.truetype(
+            "C:/Windows/Fonts/times.ttf", 65
+        )
+
+    # Calculate name position
+    bbox = draw.textbbox((0, 0), name, font=font)
+    text_width = bbox[2] - bbox[0]
+
+    x = (width - text_width) / 2
+    y = int(height * 0.47)
+
+    # Insert participant name
+    draw.text(
+        (x, y),
+        name,
+        fill="#393536",
+        font=font
     )
 
-    width, height = landscape(A4)
+    # Save as PDF
+    output_path = f"{OUTPUT}/{certificate_id}.pdf"
 
-    c.setFont("Helvetica-Bold", 32)
-    c.drawCentredString(
-        width / 2,
-        height - 130,
-        "CERTIFICATE OF PARTICIPATION"
-    )
+    img.save(output_path, "PDF", resolution=150)
 
-    c.setFont("Helvetica", 18)
-    c.drawCentredString(
-        width / 2,
-        height - 220,
-        "This certificate is proudly presented to"
-    )
-
-    c.setFont("Helvetica-Bold", 28)
-    c.drawCentredString(
-        width / 2,
-        height - 280,
-        name
-    )
-
-    c.setFont("Helvetica", 15)
-    c.drawCentredString(
-        width / 2,
-        height - 350,
-        "For participating in our event."
-    )
-
-    c.setFont("Helvetica", 12)
-    c.drawCentredString(
-        width / 2,
-        70,
-        f"Certificate ID: {certificate_id}"
-    )
-
-    c.save()
-
-    return filename
+    print(f"Generated: {output_path}")
 
 
 def main():
 
-    df = pd.read_csv(DATA_FILE)
+    df = pd.read_csv(DATA)
 
     for _, row in df.iterrows():
 
-        path = generate_certificate(
-            row["name"],
-            row["certificate_id"]
+        generate_certificate(
+            str(row["name"]),
+            str(row["certificate_id"])
         )
-
-        print(f"Generated: {path}")
 
 
 if __name__ == "__main__":
